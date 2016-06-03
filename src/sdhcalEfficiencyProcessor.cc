@@ -129,29 +129,43 @@ void sdhcalEfficiencyProcessor::AlgorithmRegistrationParameters()
     			      m_InteractionFinderParameterSetting.minNumberOfCluster,
     			      (int) 3 ); 
 
-  std::vector<float> vec,cev;
-  vec.push_back(-500.0);
-  vec.push_back(500.0);
-  registerProcessorParameter( "Layer::DetectorTransversalSize" ,
-    			      "Define the detector transversal size used by efficiency algorithm (vector size must be 2 or 4; if 2 -> first value is min, second value is max; if 4 -> two first values define x edges , two last values define y edges) ",
-    			      cev,
-    			      vec ); 
-  if( cev.size()==2 ){
-    m_LayerParameterSetting.edgeX_min=cev[0];
-    m_LayerParameterSetting.edgeY_min=cev[0];
-    m_LayerParameterSetting.edgeX_max=cev[1];
-    m_LayerParameterSetting.edgeY_max=cev[1];
-  } 
-  else if( cev.size()==4 ){
-    m_LayerParameterSetting.edgeX_min=cev[0];
-    m_LayerParameterSetting.edgeX_max=cev[1];
-    m_LayerParameterSetting.edgeY_min=cev[2];
-    m_LayerParameterSetting.edgeY_max=cev[3];
-  }
+  /*------------caloobject::CaloGeom------------*/
+  registerProcessorParameter( "Geometry::NLayers" ,
+ 			      "Number of layers",
+ 			      m_CaloGeomSetting.nLayers,
+ 			      (int) 28 ); 
+  registerProcessorParameter( "Geometry::NPixelsPerLayer" ,
+ 			      "Number of pixels per layer (assume square geometry)",
+ 			      m_CaloGeomSetting.nPixelsPerLayer,
+ 			      (int) 64 ); 
+  registerProcessorParameter( "Geometry::PixelSize" ,
+ 			      "Pixel size (assume square pixels)",
+ 			      m_CaloGeomSetting.pixelSize,
+ 			      (float) 10.0 ); 
+
+  std::vector<float> vec;
+  vec.push_back(-320.0);
+  vec.push_back(320.0);
+  registerProcessorParameter( "Geometry::DetectorTransverseSize" ,
+     			      "Define the detector transverse size used by efficiency algorithm (vector size must be 2 or 4; if 2 -> first value is min, second value is max; if 4 -> two first values define x edges , two last values define y edges) ",
+     			      edges,
+     			      vec ); 
+  if( edges.size()==2 ){
+     m_CaloGeomSetting.xmin=edges[0];
+     m_CaloGeomSetting.ymin=edges[0];
+     m_CaloGeomSetting.xmax=edges[1];
+     m_CaloGeomSetting.ymax=edges[1];
+   } 
+   else if( edges.size()==4 ){
+     m_CaloGeomSetting.xmin=edges[0];
+     m_CaloGeomSetting.xmax=edges[1];
+     m_CaloGeomSetting.ymin=edges[2];
+     m_CaloGeomSetting.ymax=edges[3];
+   }
   else{
-    std::cout << "Wrong number of values in paramater Layer::DetectorTransversalSize ----> THROW" << std::endl;
-    throw;
+    std::cout << "WARING : Wrong number of values in paramater Geometry::DetectorTransverseSize => will use default value -500.0, +500.0" << std::endl;
   }
+  /*--------------------------------------------*/
 }
 
 void sdhcalEfficiencyProcessor::init()
@@ -194,12 +208,13 @@ void sdhcalEfficiencyProcessor::init()
   algo_InteractionFinder=new algorithm::InteractionFinder();
   algo_InteractionFinder->SetInteractionFinderParameterSetting(m_InteractionFinderParameterSetting);
 
+  m_EfficiencyParameterSetting.geometry=m_CaloGeomSetting;
   algo_Efficiency=new algorithm::Efficiency();
   algo_Efficiency->SetEfficiencyParameterSetting(m_EfficiencyParameterSetting);
 
   for(int i=0; i<_nActiveLayers; i++){
     caloobject::CaloLayer* aLayer=new caloobject::CaloLayer(i);
-    aLayer->setLayerParameterSetting(m_LayerParameterSetting);
+    //aLayer->setLayerParameterSetting(m_LayerParameterSetting);
     layers.push_back(aLayer);
   }
 }
@@ -212,12 +227,12 @@ void sdhcalEfficiencyProcessor::processRunHeader( LCRunHeader* run)
 
 void sdhcalEfficiencyProcessor::DoTracking()
 {
-  std::vector<caloobject::CaloCluster*> clusters;
+  std::vector<caloobject::CaloCluster2D*> clusters;
   for(std::map<int,std::vector<caloobject::CaloHit*> >::iterator it=hitMap.begin(); it!=hitMap.end(); ++it){
     algo_Cluster->Run(it->second,clusters);
   }
   std::sort(clusters.begin(), clusters.end(), algorithm::ClusteringHelper::SortClusterByLayer);
-  for(std::vector<caloobject::CaloCluster*>::iterator it=clusters.begin(); it!=clusters.end(); ++it){
+  for(std::vector<caloobject::CaloCluster2D*>::iterator it=clusters.begin(); it!=clusters.end(); ++it){
     if(algo_ClusteringHelper->IsIsolatedCluster(*it,clusters)){
       delete *it; 
       clusters.erase(it); 
@@ -230,7 +245,8 @@ void sdhcalEfficiencyProcessor::DoTracking()
     _trackX0=track->getTrackStartingCluster()->getPosition().x();
     _trackY0=track->getTrackStartingCluster()->getPosition().y();
     _trackZ0=track->getTrackStartingCluster()->getPosition().z();
-    if( algo_InteractionFinder->Run(clusters,track->getTrackParameters())==false ){
+    algo_InteractionFinder->Run(clusters,track->getTrackParameters());
+    if( algo_InteractionFinder->FindInteraction() == false ){
       _transverseRatio=algo_Tracking->getTransverseRatio();
       _eventChi2=track->getChi2();
       CLHEP::Hep3Vector nx(-1.,0.,track->getTrackParameters()[1]);
@@ -243,11 +259,11 @@ void sdhcalEfficiencyProcessor::DoTracking()
   tree->Fill();
 
   delete track;
-  for(std::vector<caloobject::CaloCluster*>::iterator it=clusters.begin(); it!=clusters.end(); ++it)
+  for(std::vector<caloobject::CaloCluster2D*>::iterator it=clusters.begin(); it!=clusters.end(); ++it)
     delete (*it);
 }
 
-void sdhcalEfficiencyProcessor::LayerProperties(std::vector<caloobject::CaloCluster*> &clusters)
+void sdhcalEfficiencyProcessor::LayerProperties(std::vector<caloobject::CaloCluster2D*> &clusters)
 {
   int trackBegin= (*clusters.begin())->getLayerID();
   int trackEnd=(*(clusters.end()-1))->getLayerID();

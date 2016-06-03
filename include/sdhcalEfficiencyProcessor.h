@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 
+#include "CaloObject/CaloGeom.h"
 #include "CaloObject/CaloHit.h"
 #include "Algorithm/Cluster.h"
 #include "Algorithm/Tracking.h"
@@ -53,7 +54,7 @@ class sdhcalEfficiencyProcessor : public Processor {
   virtual void end() ;
 
   void AlgorithmRegistrationParameters(); 
-  void LayerProperties(std::vector<caloobject::CaloCluster*> &clusters);
+  void LayerProperties(std::vector<caloobject::CaloCluster2D*> &clusters);
   void clearVec();
   void DoTracking();
  protected:
@@ -71,6 +72,7 @@ class sdhcalEfficiencyProcessor : public Processor {
   int _nActiveLayers;
   int numElements;
   LCCollection * col;
+  std::vector<float> edges; //vector to recover geometry parameters
   /*------------------------------------------------------------------------------*/
 
   /*--------------------Algorithms list to initialise--------------------*/
@@ -90,7 +92,7 @@ class sdhcalEfficiencyProcessor : public Processor {
   /*------------------------------------------------------------------------------*/
   
   /*--------------------CaloObject setting parameter structure--------------------*/
-   caloobject::LayerParameterSetting m_LayerParameterSetting;
+  caloobject::GeomParameterSetting m_CaloGeomSetting;
   /*------------------------------------------------------------------------------*/
 
   /*--------------------CaloObject list to initialise--------------------*/

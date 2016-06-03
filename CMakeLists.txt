@@ -9,7 +9,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6 FATAL_ERROR)
 PROJECT( sdhcalMarlin )
 
 #run cmake in build directory with : 
-# cmake -C /home/steen/ilcsoft/v01-17-05/ILCSoft.cmake -DCaloSoftWare_DIR=/home/steen/CaloSoftWare ../
+# cmake -C ${ILCSOFT}/ILCSoft.cmake -DCaloSoftWare_DIR=${CaloSoftWare} ../
 
 # project version
 SET( ${PROJECT_NAME}_VERSION_MAJOR 0 )

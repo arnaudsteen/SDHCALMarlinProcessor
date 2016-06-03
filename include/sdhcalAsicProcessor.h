@@ -10,6 +10,7 @@
 #include <map>
 #include <limits>
 
+#include "CaloObject/CaloGeom.h"
 #include "CaloObject/CaloHit.h"
 #include "CaloObject/Asic.h"
 #include "Algorithm/Cluster.h"
@@ -73,7 +74,7 @@ class sdhcalAsicProcessor : public Processor {
   virtual void end() ;
 
   void AlgorithmRegistrationParameters(); 
-  void LayerProperties(std::vector<caloobject::CaloCluster*> &clusters);
+  void LayerProperties(std::vector<caloobject::CaloCluster2D*> &clusters);
   void clearVec();
   void DoTracking();
   inline int findDifID(int key){return _difList.at(key/1000*3+2-key%1000%12/4);}
@@ -97,6 +98,8 @@ class sdhcalAsicProcessor : public Processor {
   int _nAsicX;
   int _nAsicY;
   std::vector<int> _difList;
+  std::vector<float> edges; //vector to recover geometry parameters
+  CLHEP::Hep3Vector posShift;
   /*------------------------------------------------------------------------------*/
 
   /*--------------------Algorithms list to initialise--------------------*/
@@ -118,7 +121,7 @@ class sdhcalAsicProcessor : public Processor {
   /*------------------------------------------------------------------------------*/
   
   /*--------------------CaloObject setting parameter structure--------------------*/
-  caloobject::LayerParameterSetting m_LayerParameterSetting;
+  caloobject::GeomParameterSetting m_CaloGeomSetting;
   /*------------------------------------------------------------------------------*/
 
   /*--------------------CaloObject list to initialise--------------------*/
