@@ -69,13 +69,13 @@ sdhcalAsicProcessor::sdhcalAsicProcessor() : Processor("sdhcalAsicProcessor") {
   vec.push_back(499.584);
   vec.push_back(499.584);
   vec.push_back(0);
-  registerProcessorParameter( "PositionShift" ,
-			      "3 Vector to shift to have the right (0,0,0) position",
-			      _posShift,
-			      vec );
-  posShift=CLHEP::Hep3Vector( _posShift.at(0) ,
-			      _posShift.at(1) ,
-			      _posShift.at(2) );
+  // registerProcessorParameter( "PositionShift" ,
+  // 			      "3 Vector to shift to have the right (0,0,0) position",
+  // 			      _posShift,
+  // 			      vec );
+  posShift=CLHEP::Hep3Vector( 0.0,
+			      0.0,
+			      0.0 );
 
   AlgorithmRegistrationParameters();
 }
@@ -134,7 +134,7 @@ void sdhcalAsicProcessor::AlgorithmRegistrationParameters()
   registerProcessorParameter( "Tracking::CosThetaLimit" ,
     			      "Minimum value of cos(Theta) to accept the track",
     			      m_TrackingParameterSetting.cosThetaLimit,
-    			      (float) 0.9 ); 
+    			      (float) 0.0 ); 
 
   registerProcessorParameter( "Tracking::PrintDebug" ,
     			      "Boolean to know if debug if printed",
@@ -180,23 +180,32 @@ void sdhcalAsicProcessor::AlgorithmRegistrationParameters()
     			      m_InteractionFinderParameterSetting.minNumberOfCluster,
     			      (int) 3 ); 
 
+  registerProcessorParameter( "InteractionFinder::UseAnalogEnergy" ,
+    			      "Boolean to know if interaction finder algo should use cluster energy of cluster number of hits",
+    			      m_InteractionFinderParameterSetting.useAnalogEnergy,
+    			      (bool) false ); 
+
+  registerProcessorParameter( "InteractionFinder::PrintDebug" ,
+    			      "Boolean to know if debug if printed",
+    			      m_InteractionFinderParameterSetting.printDebug,
+    			      (bool) false ); 
   /*------------caloobject::CaloGeom------------*/
   registerProcessorParameter( "Geometry::NLayers" ,
  			      "Number of layers",
  			      m_CaloGeomSetting.nLayers,
- 			      (int) 28 ); 
+ 			      (int) 48 ); 
   registerProcessorParameter( "Geometry::NPixelsPerLayer" ,
  			      "Number of pixels per layer (assume square geometry)",
  			      m_CaloGeomSetting.nPixelsPerLayer,
- 			      (int) 64 ); 
+ 			      (int) 96 ); 
   registerProcessorParameter( "Geometry::PixelSize" ,
  			      "Pixel size (assume square pixels)",
  			      m_CaloGeomSetting.pixelSize,
- 			      (float) 10.0 ); 
+ 			      (float) 10.408 ); 
 
   std::vector<float> vec;
-  vec.push_back(-500.0);
-  vec.push_back(500.0);
+  vec.push_back(0.0);
+  vec.push_back(1000.0);
   registerProcessorParameter( "Geometry::DetectorTransverseSize" ,
      			      "Define the detector transverse size used by efficiency algorithm (vector size must be 2 or 4; if 2 -> first value is min, second value is max; if 4 -> two first values define x edges , two last values define y edges) ",
      			      edges,
@@ -282,6 +291,7 @@ void sdhcalAsicProcessor::init()
   tree->Branch("Multiplicity",&_multiplicity);
   tree->Branch("Multiplicity_Error",&_multiplicity_error);
   tree->Branch("Ntrack",&_ntrack);
+  tree->Branch("AsicPosition",&_asicPosition,"AsicPosition[3]/F");
 
   ntrack=new TH1D("ntrack","ntrack",10000,0,10000);
   effGlobal1=new TH1D("effGlobal1","effGlobal1",100,0,1);
@@ -298,6 +308,7 @@ void sdhcalAsicProcessor::init()
 
   _nRun = 0 ;
   _nEvt = 0 ;
+  _goodTrackCounter = 0 ;
 
   /*--------------------Algorithms initialisation--------------------*/
   algo_Cluster=new algorithm::Cluster();
@@ -361,8 +372,9 @@ void sdhcalAsicProcessor::DoTracking()
   caloobject::CaloTrack* track=NULL;
   algo_Tracking->Run(clusters,track);
   if( NULL != track ){
+    _goodTrackCounter++;
     algo_InteractionFinder->Run(clusters,track->getTrackParameters());
-    if( algo_InteractionFinder==false )
+    if( algo_InteractionFinder->FindInteraction()==false )
       LayerProperties(clusters);
   }
   file->cd();
@@ -385,8 +397,10 @@ void sdhcalAsicProcessor::LayerProperties(std::vector<caloobject::CaloCluster2D*
 
     if( layers.at(K)->getNTracks()!=0 ){
       int key = algo_AsicKeyFinder->FindAsicKey(algo_Efficiency->getExpectedPosition());
-      if( asics.find(key)==asics.end() )
+      if( asics.find(key)==asics.end() ){
 	std::cout << "Problem :: wrong key : " << key << "\t at vec = " << algo_Efficiency->getExpectedPosition() << std::endl;
+	continue;
+      }
       asics[ key ]->Update( layers.at(K) );
       trackPosition->Fill(algo_Efficiency->getExpectedPosition().x(),algo_Efficiency->getExpectedPosition().y());
     }
@@ -470,17 +484,20 @@ void sdhcalAsicProcessor::end(){
       effGlobal1->Fill(it->second->getAsicEfficiency());
       effGlobal2->Fill(it->second->getAsicEfficiency2());
       effGlobal3->Fill(it->second->getAsicEfficiency3());
-      eff2D_thr1->Fill(it->second->getPosition()[0],it->second->getPosition()[1],it->second->getAsicEfficiency()/(float)_nActiveLayers);
-      eff2D_thr2->Fill(it->second->getPosition()[0],it->second->getPosition()[1],it->second->getAsicEfficiency2()/(float)_nActiveLayers);
-      eff2D_thr3->Fill(it->second->getPosition()[0],it->second->getPosition()[1],it->second->getAsicEfficiency3()/(float)_nActiveLayers);
+      eff2D_thr1->Fill(it->second->getPosition().x(),it->second->getPosition().y(),it->second->getAsicEfficiency()/(float)_nActiveLayers);
+      eff2D_thr2->Fill(it->second->getPosition().x(),it->second->getPosition().y(),it->second->getAsicEfficiency2()/(float)_nActiveLayers);
+      eff2D_thr3->Fill(it->second->getPosition().x(),it->second->getPosition().y(),it->second->getAsicEfficiency3()/(float)_nActiveLayers);
       
-
+      _asicPosition[0]=it->second->getPosition().x();
+      _asicPosition[1]=it->second->getPosition().y();
+      _asicPosition[2]=it->second->getPosition().z();
+      
       if(it->second->getAsicEfficiency()>0.0){
 	//std::cout << it->second->getAsicMultiplicity() << std::endl;
    	_multiplicity=it->second->getAsicMultiplicity();
    	_multiplicity_error=it->second->getAsicRMSMultiplicity();
 	mulGlobal->Fill(it->second->getAsicMultiplicity());
-	mul2D->Fill(it->second->getPosition()[0],it->second->getPosition()[1],it->second->getAsicMultiplicity()/(float)_nActiveLayers);
+	mul2D->Fill(it->second->getPosition().x(),it->second->getPosition().z(),it->second->getAsicMultiplicity()/(float)_nActiveLayers);
       }
       else{
    	_multiplicity=0;
@@ -507,4 +524,6 @@ void sdhcalAsicProcessor::end(){
 
   file->Write();
   file->Close();
+
+  std::cout << "_goodTrackCounter " << _goodTrackCounter << std::endl;
 }

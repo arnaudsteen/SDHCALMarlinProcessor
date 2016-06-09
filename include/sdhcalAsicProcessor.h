@@ -84,6 +84,7 @@ class sdhcalAsicProcessor : public Processor {
 
   int _nRun ;
   int _nEvt ;
+  int _goodTrackCounter;
   /** Input collection name.
    */
   std::vector<std::string> _hcalCollections;
@@ -159,8 +160,8 @@ class sdhcalAsicProcessor : public Processor {
   float _multiplicity;
   float _multiplicity_error;
   int _ntrack;
-
-
+  
+  float _asicPosition[3];
 } ;
 
 #endif
