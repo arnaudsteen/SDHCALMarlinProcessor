@@ -1,0 +1,5 @@
+cd /Users/arnaudsteen/CaloSoftWare/build
+make install
+cd /Users/arnaudsteen/SDHCAL/SDHCALMarlinProcessor/build
+make install
+cd ../

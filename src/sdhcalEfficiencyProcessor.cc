@@ -144,8 +144,8 @@ void sdhcalEfficiencyProcessor::AlgorithmRegistrationParameters()
  			      (float) 10.0 ); 
 
   std::vector<float> vec;
-  vec.push_back(-320.0);
-  vec.push_back(320.0);
+  vec.push_back(0.0);
+  vec.push_back(1000.0);
   registerProcessorParameter( "Geometry::DetectorTransverseSize" ,
      			      "Define the detector transverse size used by efficiency algorithm (vector size must be 2 or 4; if 2 -> first value is min, second value is max; if 4 -> two first values define x edges , two last values define y edges) ",
      			      edges,
@@ -253,11 +253,10 @@ void sdhcalEfficiencyProcessor::DoTracking()
       CLHEP::Hep3Vector ny(0.,-1.,track->getTrackParameters()[3]);
       _trackCosTheta=(nx.cross(ny)).cosTheta();
       LayerProperties(clusters);
+      file->cd();
+      tree->Fill();
     }
   }
-  file->cd();
-  tree->Fill();
-
   delete track;
   for(std::vector<caloobject::CaloCluster2D*>::iterator it=clusters.begin(); it!=clusters.end(); ++it)
     delete (*it);
@@ -296,7 +295,7 @@ void sdhcalEfficiencyProcessor::processEvent( LCEvent * evt )
   // * Reading HCAL Collections of CalorimeterHits* 
   //
   //std::string initString;
-  CLHEP::Hep3Vector posShift(0.,0.,-625.213);
+  CLHEP::Hep3Vector posShift(0.,0.,0.);
   UTIL::CellIDDecoder<EVENT::CalorimeterHit> IDdecoder("M:3,S-1:3,I:9,J:9,K-1:6");
 
   for (unsigned int i(0); i < _hcalCollections.size(); ++i) {

@@ -1,0 +1,49 @@
+#!/bin/bash
+
+source /Users/arnaudsteen/ilcsoft/init_ilcsoft.sh
+export MARLIN_DLL=/Users/arnaudsteen/SDHCAL/SDHCALMarlinProcessor/lib/libsdhcalMarlin.dylib
+
+run=$1
+echo " .... Marlin process SDHCAL asic processor"
+
+FILEPATH="/Users/arnaudsteen/trivent/data"
+FILELIST=`ls ${FILEPATH} | grep TDHCAL_${run}.slcio`
+
+cat > LCIO.xml <<EOF
+<marlin>
+ <execute>
+  <processor name="sdhcalEfficiencyProcessor"/>
+ </execute>
+
+ <global>
+  <parameter name="LCIOInputFiles">
+   ${FILEPATH}/${FILELIST}
+  </parameter>
+  <!-- limit the number of processed records (run+evt): -->  
+  <!--parameter name="MaxRecordNumber" value="100000"/-->  
+  <!--parameter name="SkipNEvents" value="18000" /-->  
+  <parameter name="SupressCheck" value="false" />  
+  <!--parameter name="GearXMLFile"> gear_ldc.xml </parameter-->  
+  <parameter name="Verbosity" options="DEBUG0-4,MESSAGE0-4,WARNING0-4,ERROR0-4,SILENT"> MESSAGE  </parameter> 
+  <!--parameter name="RandomSeed" value="1234567890" /-->
+ </global>
+
+ <processor name="sdhcalEfficiencyProcessor" type="sdhcalEfficiencyProcessor">
+  <!--Name of the CalorimeterHit collection-->
+  <parameter name="CollectionName" type="string" lcioInType="CalorimeterHit"> SDHCAL_HIT </parameter>
+  <!--Name of the root output file-->
+  <parameter name="RootFileName" type="string" > tracks_${run}.root </parameter>
+  <parameter name="InteractionFinder::PrintDebug" type="bool"> false </parameter>
+  <parameter name="Tracking::CosThetaLimit" type="float"> 0.0 </parameter>
+  <parameter name="Tracking::PrintDebug" type="bool"> false </parameter>
+
+  <parameter name="Geometry::DetectorTransverseSize" type="FloatVec"> 0 1000 </parameter>
+
+ </processor>
+
+</marlin>
+
+EOF
+
+Marlin LCIO.xml
+#rm LCIO.xml

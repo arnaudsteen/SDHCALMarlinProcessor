@@ -497,7 +497,7 @@ void sdhcalAsicProcessor::end(){
    	_multiplicity=it->second->getAsicMultiplicity();
    	_multiplicity_error=it->second->getAsicRMSMultiplicity();
 	mulGlobal->Fill(it->second->getAsicMultiplicity());
-	mul2D->Fill(it->second->getPosition().x(),it->second->getPosition().z(),it->second->getAsicMultiplicity()/(float)_nActiveLayers);
+	mul2D->Fill(it->second->getPosition().x(),it->second->getPosition().y(),it->second->getAsicMultiplicity()/(float)_nActiveLayers);
       }
       else{
    	_multiplicity=0;
